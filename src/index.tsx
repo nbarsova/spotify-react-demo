@@ -1,6 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import './index.css';
 import App from './App';
 import {setSpotifyAccess, setSpotifyAccessToken, setSpotifyTokenExpirationTime} from "./LocalStorageData";
 import {SpotifyAccess} from "./SpotifyAccess";

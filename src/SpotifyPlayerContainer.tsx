@@ -1,9 +1,9 @@
 import React, {Component} from 'react';
 import {ScriptCache} from "./ScriptCache";
-import {withRouter} from "react-router";
 import SpotifyAuthWindow from "./SpotifyAuthWindow";
 import {SpotifyAccess} from "./SpotifyAccess";
 import {getSpotifyAccess, getSpotifyAccessToken} from "./LocalStorageData";
+import {FaPause, FaPlay} from "react-icons/fa";
 
 interface ISpotifyPlayerProps {
     playingRecordingId: string;
@@ -18,7 +18,9 @@ interface ISpotifyPlayerState {
     spotifyAuthorizationGranted: boolean,
     spotifyPlayerConnected: boolean,
     spotifyPlayerReady: boolean,
-    spotifyPlayer: Spotify.SpotifyPlayer | undefined
+    spotifyPlayer: Spotify.SpotifyPlayer | undefined,
+    playbackOn: boolean,
+    playbackPaused: boolean
 }
 
 class SpotifyPlayerContainer extends Component <ISpotifyPlayerProps, ISpotifyPlayerState> {
@@ -34,28 +36,29 @@ class SpotifyPlayerContainer extends Component <ISpotifyPlayerProps, ISpotifyPla
 
         window.addEventListener("storage", this.authorizeSpotifyFromStorage);
 
-            this.state = {
-                loadingState: "loading scripts",
-                spotifyAccessToken: "",
-                spotifyDeviceId: "",
-                spotifyAuthorizationGranted: false,
-                spotifyPlayerConnected: false,
-                spotifyPlayerReady: false,
-                spotifySDKLoaded: false,
-                spotifyPlayer: undefined,
-                spotifyAccess: SpotifyAccess.NOT_REQUESTED
-            };
+        this.state = {
+            loadingState: "loading scripts",
+            spotifyAccessToken: "",
+            spotifyDeviceId: "",
+            spotifyAuthorizationGranted: false,
+            spotifyPlayerConnected: false,
+            spotifyPlayerReady: false,
+            spotifySDKLoaded: false,
+            spotifyPlayer: undefined,
+            spotifyAccess: SpotifyAccess.NOT_REQUESTED,
+            playbackOn: false,
+            playbackPaused: false
+        };
 
 
     }
 
     private spotifySDKCallback = () => {
-        //@ts-ignore
         window.onSpotifyWebPlaybackSDKReady = () => {
 
             if (this.state.spotifyAccess !== SpotifyAccess.DENIED) {
                 const spotifyPlayer = new Spotify.Player({
-                    name: 'Tuttitempi Player',
+                    name: 'React Spotify Player',
                     getOAuthToken: cb => {
                         cb(this.state.spotifyAccessToken);
                     }
@@ -173,7 +176,9 @@ class SpotifyPlayerContainer extends Component <ISpotifyPlayerProps, ISpotifyPla
                     spotifyAccess: SpotifyAccess.NO_PREMIUM
                 });
             } else {
-                this.setState({loadingState: "playback started"});
+                this.setState({loadingState: "playback started",
+                    playbackOn: true});
+                console.log("Started playback", this.state);
             }
         }).catch((error) => {
             this.setState({loadingState: "playback error: " + error});
@@ -186,10 +191,11 @@ class SpotifyPlayerContainer extends Component <ISpotifyPlayerProps, ISpotifyPla
                 <h3>Spotify</h3>
                 <SpotifyAuthWindow token={this.state.spotifyAccessToken}
                                    access={this.state.spotifyAccess}/>
-                {this.state.loadingState}
-                {(this.state.spotifyAccess === SpotifyAccess.DENIED || this.state.spotifyAccess===SpotifyAccess.NO_PREMIUM)
-                &&
-                <p>would you like to remove all spotify recordings from the graph?</p>}
+                {this.state.spotifyPlayerReady && !this.state.playbackOn &&
+                <div><FaPlay /></div>}
+                {this.state.spotifyPlayerReady && !this.state.playbackPaused &&
+                <div><FaPause /></div>}
+                <p>{this.state.loadingState}</p>
             </div>
         );
     }

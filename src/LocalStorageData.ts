@@ -1,22 +1,8 @@
 import {SpotifyAccess} from "./SpotifyAccess";
 
-const INTRO_DONE = "intro-done";
 const SPOTIFY_AUTH_TOKEN = "spotifyAuthToken";
 const SPOTIFY_ACCESS = "spotifyAccess";
 const SPOTIFY_TOKEN_EXPIRATION_TIME = "spotifyTokenExpirationTime";
-const SOURCE_VISIBILITY = "_recordings_visible";
-
-export function isIntroDone(): boolean {
-    return localStorage.getItem(INTRO_DONE) === "1";
-}
-
-export function setIntroDone(done: boolean): void {
-    if (done) {
-        localStorage.setItem(INTRO_DONE, "1");
-    } else {
-        localStorage.removeItem(INTRO_DONE);
-    }
-}
 
 export function getSpotifyAccess(): SpotifyAccess | null {
     if (localStorage.getItem(SPOTIFY_ACCESS) === null) {
@@ -57,15 +43,4 @@ export function setSpotifyTokenExpirationTime(time: string) {
 
 export function getSpotifyTokenExpirationTime(): number {
     return Number(localStorage.getItem(SPOTIFY_TOKEN_EXPIRATION_TIME));
-}
-
-export function setRecordingSourceVisible(sourceType: string, visible: boolean) {
-    localStorage.setItem(sourceType + SOURCE_VISIBILITY, String(visible));
-}
-
-export function isRecordingSourceVisible(sourceType: string): boolean | undefined {
-    if (!localStorage.getItem(sourceType + SOURCE_VISIBILITY)) {
-        return;
-    }
-    return localStorage.getItem(sourceType + SOURCE_VISIBILITY) !== "false";
 }

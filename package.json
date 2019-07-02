@@ -7,12 +7,13 @@
     "@types/node": "11.10.4",
     "@types/react": "16.8.6",
     "@types/react-dom": "16.8.2",
-    "@types/react-router": "^4.4.5",
-    "@types/spotify-web-playback-sdk": "^0.1.5",
-    "react": "^16.8.3",
-    "react-dom": "^16.8.3",
-    "react-scripts": "2.1.5",
-    "typescript": "3.3.3333"
+    "@types/react-icons": "^3.0.0",
+    "@types/spotify-web-playback-sdk": "^0.1.6",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
+    "react-icons": "^3.7.0",
+    "react-scripts": "^2.1.8",
+    "typescript": "^3.4.5"
   },
   "scripts": {
     "start": "react-scripts start",
