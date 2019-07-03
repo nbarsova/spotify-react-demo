@@ -4,6 +4,7 @@ import SpotifyAuthWindow from "./SpotifyAuthWindow";
 import {SpotifyAccess} from "./SpotifyAccess";
 import {getSpotifyAccess, getSpotifyAccessToken} from "./LocalStorageData";
 import {FaPause, FaPlay} from "react-icons/fa";
+import styles from "./App.module.css";
 
 interface ISpotifyPlayerProps {
     playingRecordingId: string;
@@ -89,9 +90,10 @@ class SpotifyPlayerContainer extends Component <ISpotifyPlayerProps, ISpotifyPla
                     console.log('Ready with Device ID', device_id);
                     this.setState({
                         loadingState: "spotify player ready",
-                        spotifyDeviceId: device_id
+                        spotifyDeviceId: device_id,
+                        spotifyPlayerReady: true
                     });
-                    this.playTrack(this.props.playingRecordingId);
+                    // this.startPlayback(this.props.playingRecordingId);
                 });
 
                 // Not Ready
@@ -160,8 +162,9 @@ class SpotifyPlayerContainer extends Component <ISpotifyPlayerProps, ISpotifyPla
         }
     }
 
-    private playTrack = (spotify_uri: string) => {
-        fetch("https://api.spotify.com/v1/me/player/play?device_id=" + this.state.spotifyDeviceId, {
+    private startPlayback = (spotify_uri: string) => {
+        fetch("https://api.spotify.com/v1/me/player/play?" +
+            "device_id=" + this.state.spotifyDeviceId, {
             method: 'PUT',
             body: JSON.stringify({uris: [spotify_uri]}),
             headers: {
@@ -176,8 +179,10 @@ class SpotifyPlayerContainer extends Component <ISpotifyPlayerProps, ISpotifyPla
                     spotifyAccess: SpotifyAccess.NO_PREMIUM
                 });
             } else {
-                this.setState({loadingState: "playback started",
-                    playbackOn: true});
+                this.setState({
+                    loadingState: "playback started",
+                    playbackOn: true, playbackPaused: false
+                });
                 console.log("Started playback", this.state);
             }
         }).catch((error) => {
@@ -185,17 +190,62 @@ class SpotifyPlayerContainer extends Component <ISpotifyPlayerProps, ISpotifyPla
         })
     };
 
+    private resumePlayback = () => {
+        fetch("https://api.spotify.com/v1/me/player/play?" +
+            "device_id=" + this.state.spotifyDeviceId, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.state.spotifyAccessToken}`
+            },
+        }).then((ev) => {
+            this.setState({playbackPaused: false});
+        });
+        console.log("Started playback", this.state);
+    }
+
+    private pauseTrack = () => {
+        fetch("https://api.spotify.com/v1/me/player/pause?device_id=" + this.state.spotifyDeviceId, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.state.spotifyAccessToken}`
+            },
+        }).then((ev) => {
+            this.setState({playbackPaused: true});
+        })
+    }
+
     render() {
         return (
-            <div className="App">
+            <div className={styles.app}>
                 <h3>Spotify</h3>
                 <SpotifyAuthWindow token={this.state.spotifyAccessToken}
                                    access={this.state.spotifyAccess}/>
-                {this.state.spotifyPlayerReady && !this.state.playbackOn &&
-                <div><FaPlay /></div>}
-                {this.state.spotifyPlayerReady && !this.state.playbackPaused &&
-                <div><FaPause /></div>}
-                <p>{this.state.loadingState}</p>
+                <div className={styles.player}>
+                    {this.state.spotifyPlayerReady &&
+                    <div onClick={() => {
+                        if (!this.state.playbackOn) {
+                            this.startPlayback(this.props.playingRecordingId);
+                        } else {
+                            if (this.state.playbackPaused) {
+                                this.resumePlayback();
+                            }
+                        }
+                    }}>
+                        <FaPlay/>
+                    </div>}
+                    {this.state.spotifyPlayerReady && this.state.playbackOn &&
+                    <div onClick={() => {
+                        if (!this.state.playbackPaused) {
+                            this.pauseTrack();
+                        }
+                    }}>
+                        <FaPause/>
+                    </div>}
+                </div>
+
+                <p className={styles.statusMessage}>{this.state.loadingState}</p>
             </div>
         );
     }
