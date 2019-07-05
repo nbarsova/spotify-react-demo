@@ -25,6 +25,7 @@ interface ISpotifyPlayerState {
 }
 
 class SpotifyPlayerContainer extends Component <ISpotifyPlayerProps, ISpotifyPlayerState> {
+    private connectToPlayerTimeout: any;
 
     public constructor(props: ISpotifyPlayerProps) {
         super(props);
@@ -65,41 +66,11 @@ class SpotifyPlayerContainer extends Component <ISpotifyPlayerProps, ISpotifyPla
                     }
                 });
 
-
-                // Error handling
-                spotifyPlayer.addListener('initialization_error', ({message}) => {
-                    console.error(message);
-                });
-                spotifyPlayer.addListener('authentication_error', ({message}) => {
-                    console.error(message);
-                });
-                spotifyPlayer.addListener('account_error', ({message}) => {
-                    console.error(message);
-                });
-                spotifyPlayer.addListener('playback_error', ({message}) => {
-                    console.error(message);
-                });
-
                 // Playback status updates
                 spotifyPlayer.addListener('player_state_changed', state => {
                     console.log(state);
                 });
 
-                // Ready
-                spotifyPlayer.addListener('ready', ({device_id}) => {
-                    console.log('Ready with Device ID', device_id);
-                    this.setState({
-                        loadingState: "spotify player ready",
-                        spotifyDeviceId: device_id,
-                        spotifyPlayerReady: true
-                    });
-                    // this.startPlayback(this.props.playingRecordingId);
-                });
-
-                // Not Ready
-                spotifyPlayer.addListener('not_ready', ({device_id}) => {
-                    console.log('Device ID has gone offline', device_id);
-                });
 
                 this.setState({
                     loadingState: "spotify scripts loaded",
@@ -113,54 +84,56 @@ class SpotifyPlayerContainer extends Component <ISpotifyPlayerProps, ISpotifyPla
 
     }
 
-    private authorizeSpotifyFromStorage = (e: any) => {
-        console.log("storage change ");
-        const spotifyAccessToken = getSpotifyAccessToken();
-        const spotifyAccess = getSpotifyAccess();
+    private authorizeSpotifyFromStorage = (e: StorageEvent) => {
 
-        if (spotifyAccess === SpotifyAccess.DENIED) {
-            this.setState({
-                spotifyAccess: SpotifyAccess.DENIED,
-                loadingState: "spotify access denied"
-            });
-        } else if (spotifyAccessToken !== null) {
-            this.setState({
-                spotifyAccessToken: spotifyAccessToken,
-                spotifyAccess: SpotifyAccess.ALLOWED,
-                loadingState: "spotify token retrieved"
-            });
+        if (e.key === "spotifyAuthToken") {
+            const spotifyAccessToken = e.newValue;
 
-            fetch("https://api.spotify.com/v1/me", {
-                method: "GET",
-                headers: {
-                    'Authorization': 'Bearer ' + spotifyAccessToken
-                }
-            })
-                .then(response => {
-                    console.log("authorization granted ", response);
+            const spotifyAccess = getSpotifyAccess();
 
-                    if (response.body) {
-                        const reader = response.body.getReader();
-                        reader.read().then(({done, value}) => {
-                            if (done) {
-                                return;
-                            }
-                        });
-                    }
-
-                    this.setState({
-                        loadingState: "authorisation granted"
-                    });
-                    console.log("spotify player ", this.state.spotifyPlayer);
-                    this.state.spotifyPlayer && this.state.spotifyPlayer.connect().then((ev: any) => {
-                        this.setState({loadingState: "connected to player"});
-                    });
-                })
-                .catch((error) => {
-                    console.log("authorization fetch error", error);
+            if (spotifyAccess === SpotifyAccess.DENIED) {
+                this.setState({
+                    spotifyAccess: SpotifyAccess.DENIED,
+                    loadingState: "spotify access denied"
                 });
+            } else if (spotifyAccessToken !== null) {
+                this.setState({
+                    spotifyAccessToken: spotifyAccessToken,
+                    spotifyAccess: SpotifyAccess.ALLOWED,
+                    loadingState: "spotify token retrieved"
+                });
+            }
+            this.connectToPlayer();
         }
     }
+
+    private connectToPlayer = () => {
+        if (this.state.spotifyPlayer) {
+            clearTimeout(this.connectToPlayerTimeout);
+            // Ready
+            this.state.spotifyPlayer.addListener('ready', ({device_id}) => {
+                console.log('Ready with Device ID', device_id);
+                this.setState({
+                    loadingState: "spotify player ready",
+                    spotifyDeviceId: device_id,
+                    spotifyPlayerReady: true
+                });
+            });
+
+            // Not Ready
+            this.state.spotifyPlayer.addListener('not_ready', ({device_id}) => {
+                console.log('Device ID has gone offline', device_id);
+            });
+
+            this.state.spotifyPlayer.connect()
+                .then((ev: any) => {
+                    this.setState({loadingState: "connected to player"});
+                });
+        } else {
+            this.connectToPlayerTimeout = setTimeout(this.connectToPlayer.bind(this), 1000);
+        }
+    }
+
 
     private startPlayback = (spotify_uri: string) => {
         fetch("https://api.spotify.com/v1/me/player/play?" +
@@ -170,7 +143,7 @@ class SpotifyPlayerContainer extends Component <ISpotifyPlayerProps, ISpotifyPla
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${this.state.spotifyAccessToken}`
-            },
+            }
         }).then((ev) => {
             console.log(ev);
             if (ev.status === 403) {
@@ -205,7 +178,8 @@ class SpotifyPlayerContainer extends Component <ISpotifyPlayerProps, ISpotifyPla
     }
 
     private pauseTrack = () => {
-        fetch("https://api.spotify.com/v1/me/player/pause?device_id=" + this.state.spotifyDeviceId, {
+        fetch("https://api.spotify.com/v1/me/player/pause?" +
+            "device_id=" + this.state.spotifyDeviceId, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -220,8 +194,7 @@ class SpotifyPlayerContainer extends Component <ISpotifyPlayerProps, ISpotifyPla
         return (
             <div className={styles.app}>
                 <h3>Spotify</h3>
-                <SpotifyAuthWindow token={this.state.spotifyAccessToken}
-                                   access={this.state.spotifyAccess}/>
+                <SpotifyAuthWindow/>
                 <div className={styles.player}>
                     {this.state.spotifyPlayerReady &&
                     <div onClick={() => {
